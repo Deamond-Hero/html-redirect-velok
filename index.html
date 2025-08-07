@@ -1,30 +1,180 @@
-<!-- https://velok.app/open/trip/123 -->
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Abriendo Velok...</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 400px;
+            margin: 1rem;
+        }
+        
+        h1 {
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+        
+        p {
+            margin: 0.5rem 0;
+            opacity: 0.9;
+        }
+        
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 1rem auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .retry-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .retry-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+    </style>
     <script>
-        const tripId = window.location.pathname.split('/').pop();
-        const deepLink = `velok-app://trip/${tripId}`;
-        const playStore = 'https://play.google.com/store/apps/details?id=com.velok.app';
-        const appStore = 'https://apps.apple.com/app/velok/id123456789';
-        
-        // Intentar abrir la app
-        window.location.href = deepLink;
-        
-        // Si no se abre en 2 segundos, redirigir a la tienda
-        setTimeout(() => {
-            if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
-                window.location.href = appStore;
-            } else {
-                window.location.href = playStore;
+        function extractTripId() {
+            // Obtener parámetros de la URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const tripFromQuery = urlParams.get('trip') || urlParams.get('tripId');
+            
+            if (tripFromQuery) {
+                return tripFromQuery;
             }
-        }, 2000);
+            
+            // Fallback: extraer del path si la URL es como /trip/123
+            const pathParts = window.location.pathname.split('/');
+            const tripIndex = pathParts.indexOf('trip');
+            
+            if (tripIndex !== -1 && tripIndex + 1 < pathParts.length) {
+                return pathParts[tripIndex + 1];
+            }
+            
+            // Último fallback: tomar el último segmento si parece ser un ID
+            const lastSegment = pathParts[pathParts.length - 1];
+            if (lastSegment && /^\d+$/.test(lastSegment)) {
+                return lastSegment;
+            }
+            
+            return null;
+        }
+        
+        function attemptAppOpen() {
+            const tripId = extractTripId();
+            
+            if (!tripId) {
+                console.error('No se pudo extraer el trip ID');
+                document.getElementById('status').innerText = 'Error: ID de viaje no encontrado';
+                return;
+            }
+            
+            console.log('Trip ID encontrado:', tripId);
+            
+            const deepLink = `velok-app://trip/${tripId}`;
+            const playStore = 'https://play.google.com/store/apps/details?id=com.velok.app';
+            const appStore = 'https://apps.apple.com/app/velok/id123456789'; // Reemplaza con tu ID real
+            
+            // Detectar plataforma
+            const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+            const isAndroid = /Android/.test(navigator.userAgent);
+            
+            console.log('Intentando abrir:', deepLink);
+            
+            // Para iOS, usar un iframe oculto es más confiable
+            if (isIOS) {
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = deepLink;
+                document.body.appendChild(iframe);
+                
+                setTimeout(() => {
+                    document.body.removeChild(iframe);
+                }, 100);
+            } else {
+                // Para Android, usar window.location
+                window.location.href = deepLink;
+            }
+            
+            // Fallback después de 2.5 segundos
+            const fallbackTimer = setTimeout(() => {
+                console.log('Redirigiendo a tienda...');
+                if (isIOS) {
+                    window.location.href = appStore;
+                } else {
+                    window.location.href = playStore;
+                }
+            }, 2500);
+            
+            // Detectar si la app se abrió (página se vuelve hidden)
+            const handleVisibilityChange = () => {
+                if (document.hidden) {
+                    clearTimeout(fallbackTimer);
+                    console.log('App abierta exitosamente');
+                }
+            };
+            
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+            
+            // Limpiar listener después de 5 segundos
+            setTimeout(() => {
+                document.removeEventListener('visibilitychange', handleVisibilityChange);
+            }, 5000);
+        }
+        
+        // Ejecutar cuando la página cargue
+        window.addEventListener('load', () => {
+            console.log('Página cargada, URL actual:', window.location.href);
+            attemptAppOpen();
+        });
     </script>
 </head>
 <body>
-    <p>Abriendo Velok...</p>
-    <p>Si no se abre automáticamente, <a href="#" onclick="window.location.reload()">toca aquí</a></p>
+    <div class="container">
+        <h1>🚴‍♂️ Velok</h1>
+        <div class="spinner"></div>
+        <p id="status">Abriendo la aplicación...</p>
+        <p>Si no se abre automáticamente:</p>
+        <button class="retry-btn" onclick="attemptAppOpen()">Reintentar</button>
+    </div>
 </body>
 </html>
