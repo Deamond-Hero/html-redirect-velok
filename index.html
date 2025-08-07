@@ -118,8 +118,11 @@
         }
 
         function updateDebugInfo() {
+            const tripId = extractTripId();
+            const serviceId = extractServiceId();
+            
             document.getElementById('url-info').innerText = `URL: ${window.location.href}`;
-            document.getElementById('trip-info').innerText = `Trip ID: ${extractTripId()}`;
+            document.getElementById('trip-info').innerText = `Trip ID: ${tripId || 'N/A'} | Service ID: ${serviceId || 'N/A'}`;
             document.getElementById('platform-info').innerText = `Platform: ${getPlatform()}`;
             document.getElementById('deeplink-info').innerText = `Deep Link: ${generateDeepLink()}`;
         }
@@ -161,24 +164,60 @@
             return null;
         }
 
+        function extractServiceId() {
+            // Obtener parámetros de la URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const serviceFromQuery = urlParams.get('service') || urlParams.get('serviceId');
+            
+            if (serviceFromQuery) {
+                console.log('Service ID from query params:', serviceFromQuery);
+                return serviceFromQuery;
+            }
+            
+            // Fallback: extraer del path si la URL es como /service/123
+            const pathParts = window.location.pathname.split('/');
+            const serviceIndex = pathParts.indexOf('service');
+            
+            if (serviceIndex !== -1 && serviceIndex + 1 < pathParts.length) {
+                const serviceId = pathParts[serviceIndex + 1];
+                console.log('Service ID from path:', serviceId);
+                return serviceId;
+            }
+            
+            console.log('No service ID found');
+            return null;
+        }
+
         function generateDeepLink() {
             const tripId = extractTripId();
-            if (!tripId) return null;
-            // IMPORTANTE: Solo dos barras después de los dos puntos
-            return `velok-app://trip/${tripId}`;
+            const serviceId = extractServiceId();
+            
+            if (tripId) {
+                return `velok-app://trip/${tripId}`;
+            }
+            
+            if (serviceId) {
+                return `velok-app://service/${serviceId}`;
+            }
+            
+            return null;
         }
         
         function attemptAppOpen() {
             const tripId = extractTripId();
+            const serviceId = extractServiceId();
             
-            if (!tripId) {
-                console.error('No se pudo extraer el trip ID');
-                document.getElementById('status').innerText = 'Error: ID de viaje no encontrado en la URL';
+            if (!tripId && !serviceId) {
+                console.error('No se pudo extraer el trip ID o service ID');
+                document.getElementById('status').innerText = 'Error: ID no encontrado en la URL';
                 updateDebugInfo();
                 return;
             }
             
-            console.log('Trip ID encontrado:', tripId);
+            const itemType = tripId ? 'trip' : 'service';
+            const itemId = tripId || serviceId;
+            
+            console.log(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} ID encontrado:`, itemId);
             document.getElementById('status').innerText = 'Abriendo Velok...';
             
             const deepLink = generateDeepLink();
