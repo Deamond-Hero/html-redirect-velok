@@ -164,6 +164,7 @@
         function generateDeepLink() {
             const tripId = extractTripId();
             if (!tripId) return null;
+            // IMPORTANTE: Solo dos barras después de los dos puntos
             return `velok-app://trip/${tripId}`;
         }
         
