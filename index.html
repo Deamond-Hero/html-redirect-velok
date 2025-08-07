@@ -1,0 +1,30 @@
+<!-- https://velok.app/open/trip/123 -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Abriendo Velok...</title>
+    <script>
+        const tripId = window.location.pathname.split('/').pop();
+        const deepLink = `velok-app://trip/${tripId}`;
+        const playStore = 'https://play.google.com/store/apps/details?id=com.velok.app';
+        const appStore = 'https://apps.apple.com/app/velok/id123456789';
+        
+        // Intentar abrir la app
+        window.location.href = deepLink;
+        
+        // Si no se abre en 2 segundos, redirigir a la tienda
+        setTimeout(() => {
+            if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+                window.location.href = appStore;
+            } else {
+                window.location.href = playStore;
+            }
+        }, 2000);
+    </script>
+</head>
+<body>
+    <p>Abriendo Velok...</p>
+    <p>Si no se abre automáticamente, <a href="#" onclick="window.location.reload()">toca aquí</a></p>
+</body>
+</html>
