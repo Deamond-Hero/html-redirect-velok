@@ -193,11 +193,11 @@
             const serviceId = extractServiceId();
             
             if (tripId) {
-                return `velok-app://trip/${tripId}`;
+                return `velok-app://(sharedTrip)/viewTrip`;
             }
             
             if (serviceId) {
-                return `velok-app://service/${serviceId}`;
+                return `velok-app://(sharedService)/details`;
             }
             
             return null;
