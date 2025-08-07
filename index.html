@@ -71,102 +71,16 @@
             background: rgba(255, 255, 255, 0.3);
             transform: translateY(-2px);
         }
+
+        .debug {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            font-size: 0.8rem;
+            text-align: left;
+        }
     </style>
-    <script>
-        function extractTripId() {
-            // Obtener parámetros de la URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const tripFromQuery = urlParams.get('trip') || urlParams.get('tripId');
-            
-            if (tripFromQuery) {
-                return tripFromQuery;
-            }
-            
-            // Fallback: extraer del path si la URL es como /trip/123
-            const pathParts = window.location.pathname.split('/');
-            const tripIndex = pathParts.indexOf('trip');
-            
-            if (tripIndex !== -1 && tripIndex + 1 < pathParts.length) {
-                return pathParts[tripIndex + 1];
-            }
-            
-            // Último fallback: tomar el último segmento si parece ser un ID
-            const lastSegment = pathParts[pathParts.length - 1];
-            if (lastSegment && /^\d+$/.test(lastSegment)) {
-                return lastSegment;
-            }
-            
-            return null;
-        }
-        
-        function attemptAppOpen() {
-            const tripId = extractTripId();
-            
-            if (!tripId) {
-                console.error('No se pudo extraer el trip ID');
-                document.getElementById('status').innerText = 'Error: ID de viaje no encontrado';
-                return;
-            }
-            
-            console.log('Trip ID encontrado:', tripId);
-            
-            const deepLink = `velok-app://trip/${tripId}`;
-            const playStore = 'https://play.google.com/store/apps/details?id=com.velok.app';
-            const appStore = 'https://apps.apple.com/app/velok/id123456789'; // Reemplaza con tu ID real
-            
-            // Detectar plataforma
-            const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-            const isAndroid = /Android/.test(navigator.userAgent);
-            
-            console.log('Intentando abrir:', deepLink);
-            
-            // Para iOS, usar un iframe oculto es más confiable
-            if (isIOS) {
-                const iframe = document.createElement('iframe');
-                iframe.style.display = 'none';
-                iframe.src = deepLink;
-                document.body.appendChild(iframe);
-                
-                setTimeout(() => {
-                    document.body.removeChild(iframe);
-                }, 100);
-            } else {
-                // Para Android, usar window.location
-                window.location.href = deepLink;
-            }
-            
-            // Fallback después de 2.5 segundos
-            const fallbackTimer = setTimeout(() => {
-                console.log('Redirigiendo a tienda...');
-                if (isIOS) {
-                    window.location.href = appStore;
-                } else {
-                    window.location.href = playStore;
-                }
-            }, 2500);
-            
-            // Detectar si la app se abrió (página se vuelve hidden)
-            const handleVisibilityChange = () => {
-                if (document.hidden) {
-                    clearTimeout(fallbackTimer);
-                    console.log('App abierta exitosamente');
-                }
-            };
-            
-            document.addEventListener('visibilitychange', handleVisibilityChange);
-            
-            // Limpiar listener después de 5 segundos
-            setTimeout(() => {
-                document.removeEventListener('visibilitychange', handleVisibilityChange);
-            }, 5000);
-        }
-        
-        // Ejecutar cuando la página cargue
-        window.addEventListener('load', () => {
-            console.log('Página cargada, URL actual:', window.location.href);
-            attemptAppOpen();
-        });
-    </script>
 </head>
 <body>
     <div class="container">
@@ -175,6 +89,203 @@
         <p id="status">Abriendo la aplicación...</p>
         <p>Si no se abre automáticamente:</p>
         <button class="retry-btn" onclick="attemptAppOpen()">Reintentar</button>
+        
+        <!-- Debug info -->
+        <div class="debug" id="debug-info" style="display: none;">
+            <p><strong>Debug Info:</strong></p>
+            <p id="url-info"></p>
+            <p id="trip-info"></p>
+            <p id="platform-info"></p>
+            <p id="deeplink-info"></p>
+        </div>
+        
+        <button class="retry-btn" onclick="toggleDebug()" style="font-size: 0.7rem;">
+            Mostrar Debug
+        </button>
     </div>
+
+    <script>
+        let debugVisible = false;
+
+        function toggleDebug() {
+            const debugDiv = document.getElementById('debug-info');
+            debugVisible = !debugVisible;
+            debugDiv.style.display = debugVisible ? 'block' : 'none';
+            
+            if (debugVisible) {
+                updateDebugInfo();
+            }
+        }
+
+        function updateDebugInfo() {
+            document.getElementById('url-info').innerText = `URL: ${window.location.href}`;
+            document.getElementById('trip-info').innerText = `Trip ID: ${extractTripId()}`;
+            document.getElementById('platform-info').innerText = `Platform: ${getPlatform()}`;
+            document.getElementById('deeplink-info').innerText = `Deep Link: ${generateDeepLink()}`;
+        }
+
+        function getPlatform() {
+            if (/iPhone|iPad|iPod/.test(navigator.userAgent)) return 'iOS';
+            if (/Android/.test(navigator.userAgent)) return 'Android';
+            return 'Other';
+        }
+
+        function extractTripId() {
+            // Obtener parámetros de la URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const tripFromQuery = urlParams.get('trip') || urlParams.get('tripId');
+            
+            if (tripFromQuery) {
+                console.log('Trip ID from query params:', tripFromQuery);
+                return tripFromQuery;
+            }
+            
+            // Fallback: extraer del path si la URL es como /trip/123
+            const pathParts = window.location.pathname.split('/');
+            const tripIndex = pathParts.indexOf('trip');
+            
+            if (tripIndex !== -1 && tripIndex + 1 < pathParts.length) {
+                const tripId = pathParts[tripIndex + 1];
+                console.log('Trip ID from path:', tripId);
+                return tripId;
+            }
+            
+            // Último fallback: tomar el último segmento si parece ser un ID
+            const lastSegment = pathParts[pathParts.length - 1];
+            if (lastSegment && /^\d+$/.test(lastSegment)) {
+                console.log('Trip ID from last segment:', lastSegment);
+                return lastSegment;
+            }
+            
+            console.log('No trip ID found');
+            return null;
+        }
+
+        function generateDeepLink() {
+            const tripId = extractTripId();
+            if (!tripId) return null;
+            return `velok-app://trip/${tripId}`;
+        }
+        
+        function attemptAppOpen() {
+            const tripId = extractTripId();
+            
+            if (!tripId) {
+                console.error('No se pudo extraer el trip ID');
+                document.getElementById('status').innerText = 'Error: ID de viaje no encontrado en la URL';
+                updateDebugInfo();
+                return;
+            }
+            
+            console.log('Trip ID encontrado:', tripId);
+            document.getElementById('status').innerText = 'Abriendo Velok...';
+            
+            const deepLink = generateDeepLink();
+            const playStore = 'https://play.google.com/store/apps/details?id=com.velok.app';
+            const appStore = 'https://apps.apple.com/app/velok/id123456789'; // REEMPLAZA CON TU ID REAL
+            
+            // Detectar plataforma
+            const platform = getPlatform();
+            const isIOS = platform === 'iOS';
+            const isAndroid = platform === 'Android';
+            
+            console.log('Platform detected:', platform);
+            console.log('Attempting to open deep link:', deepLink);
+            
+            // Método más robusto para intentar abrir la app
+            let appOpened = false;
+            
+            // Crear elemento invisible para el intento
+            if (isIOS) {
+                // Para iOS, usar un iframe oculto
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = deepLink;
+                document.body.appendChild(iframe);
+                
+                setTimeout(() => {
+                    if (document.body.contains(iframe)) {
+                        document.body.removeChild(iframe);
+                    }
+                }, 500);
+            } else {
+                // Para Android y otros, usar window.location
+                window.location.href = deepLink;
+            }
+            
+            // Sistema de detección mejorado
+            let startTime = Date.now();
+            let blurTimer;
+            let fallbackTimer;
+            
+            // Detectar si la página pierde el foco (indica que la app se abrió)
+            const handleVisibilityChange = () => {
+                if (document.hidden || document.visibilityState === 'hidden') {
+                    appOpened = true;
+                    console.log('App opened successfully (page hidden)');
+                    document.getElementById('status').innerText = '¡Velok abierto exitosamente!';
+                    clearTimeout(fallbackTimer);
+                }
+            };
+            
+            const handleBlur = () => {
+                appOpened = true;
+                console.log('App opened successfully (window blur)');
+                document.getElementById('status').innerText = '¡Velok abierto exitosamente!';
+                clearTimeout(fallbackTimer);
+            };
+            
+            // Agregar listeners
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+            window.addEventListener('blur', handleBlur);
+            
+            // Fallback timer - aumentado a 3 segundos
+            fallbackTimer = setTimeout(() => {
+                if (!appOpened) {
+                    console.log('App did not open, redirecting to store...');
+                    document.getElementById('status').innerText = 'Redirigiendo a la tienda...';
+                    
+                    if (isIOS) {
+                        window.location.href = appStore;
+                    } else if (isAndroid) {
+                        window.location.href = playStore;
+                    } else {
+                        // Para otros dispositivos, mostrar ambas opciones
+                        document.getElementById('status').innerHTML = `
+                            App no disponible para esta plataforma.<br>
+                            <a href="${playStore}" style="color: white;">Descargar para Android</a><br>
+                            <a href="${appStore}" style="color: white;">Descargar para iOS</a>
+                        `;
+                    }
+                }
+            }, 3000);
+            
+            // Limpiar listeners después de 10 segundos
+            setTimeout(() => {
+                document.removeEventListener('visibilitychange', handleVisibilityChange);
+                window.removeEventListener('blur', handleBlur);
+                clearTimeout(fallbackTimer);
+            }, 10000);
+        }
+        
+        // Ejecutar cuando la página cargue
+        window.addEventListener('load', () => {
+            console.log('Página cargada');
+            console.log('URL actual:', window.location.href);
+            console.log('User Agent:', navigator.userAgent);
+            
+            // Pequeña demora para mejor UX
+            setTimeout(() => {
+                attemptAppOpen();
+            }, 500);
+        });
+
+        // También intentar si la página ya está cargada
+        if (document.readyState === 'complete') {
+            setTimeout(() => {
+                attemptAppOpen();
+            }, 500);
+        }
+    </script>
 </body>
 </html>
