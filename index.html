@@ -134,7 +134,6 @@
         }
 
         function extractTripId() {
-            // Obtener parámetros de la URL
             const urlParams = new URLSearchParams(window.location.search);
             const tripFromQuery = urlParams.get('trip') || urlParams.get('tripId');
             
@@ -143,7 +142,6 @@
                 return tripFromQuery;
             }
             
-            // Fallback: extraer del path si la URL es como /trip/123
             const pathParts = window.location.pathname.split('/');
             const tripIndex = pathParts.indexOf('trip');
             
@@ -153,7 +151,6 @@
                 return tripId;
             }
             
-            // Último fallback: tomar el último segmento si parece ser un ID
             const lastSegment = pathParts[pathParts.length - 1];
             if (lastSegment && /^\d+$/.test(lastSegment)) {
                 console.log('Trip ID from last segment:', lastSegment);
@@ -165,7 +162,6 @@
         }
 
         function extractServiceId() {
-            // Obtener parámetros de la URL
             const urlParams = new URLSearchParams(window.location.search);
             const serviceFromQuery = urlParams.get('service') || urlParams.get('serviceId');
             
@@ -174,7 +170,6 @@
                 return serviceFromQuery;
             }
             
-            // Fallback: extraer del path si la URL es como /service/123
             const pathParts = window.location.pathname.split('/');
             const serviceIndex = pathParts.indexOf('service');
             
@@ -192,12 +187,13 @@
             const tripId = extractTripId();
             const serviceId = extractServiceId();
             
+            // Nuevo formato: usar las rutas exactas de la app
             if (tripId) {
-                return `velok-app://trip/${tripId}`;
+                return `velok-app://(sharedTrips)/viewTrip?tripId=${tripId}`;
             }
             
             if (serviceId) {
-                return `velok-app://service/${serviceId}`;
+                return `velok-app://(sharedServices)/details?serviceId=${serviceId}`;
             }
             
             return null;
@@ -222,9 +218,8 @@
             
             const deepLink = generateDeepLink();
             const playStore = 'https://play.google.com/store/apps/details?id=com.velok.app';
-            const appStore = 'https://apps.apple.com/app/velok/id123456789'; // REEMPLAZA CON TU ID REAL
+            const appStore = 'https://apps.apple.com/app/velok/id123456789';
             
-            // Detectar plataforma
             const platform = getPlatform();
             const isIOS = platform === 'iOS';
             const isAndroid = platform === 'Android';
@@ -232,12 +227,9 @@
             console.log('Platform detected:', platform);
             console.log('Attempting to open deep link:', deepLink);
             
-            // Método más robusto para intentar abrir la app
             let appOpened = false;
             
-            // Crear elemento invisible para el intento
             if (isIOS) {
-                // Para iOS, usar un iframe oculto
                 const iframe = document.createElement('iframe');
                 iframe.style.display = 'none';
                 iframe.src = deepLink;
@@ -249,16 +241,13 @@
                     }
                 }, 500);
             } else {
-                // Para Android y otros, usar window.location
                 window.location.href = deepLink;
             }
             
-            // Sistema de detección mejorado
             let startTime = Date.now();
             let blurTimer;
             let fallbackTimer;
             
-            // Detectar si la página pierde el foco (indica que la app se abrió)
             const handleVisibilityChange = () => {
                 if (document.hidden || document.visibilityState === 'hidden') {
                     appOpened = true;
@@ -275,11 +264,9 @@
                 clearTimeout(fallbackTimer);
             };
             
-            // Agregar listeners
             document.addEventListener('visibilitychange', handleVisibilityChange);
             window.addEventListener('blur', handleBlur);
             
-            // Fallback timer - aumentado a 3 segundos
             fallbackTimer = setTimeout(() => {
                 if (!appOpened) {
                     console.log('App did not open, redirecting to store...');
@@ -290,7 +277,6 @@
                     } else if (isAndroid) {
                         window.location.href = playStore;
                     } else {
-                        // Para otros dispositivos, mostrar ambas opciones
                         document.getElementById('status').innerHTML = `
                             App no disponible para esta plataforma.<br>
                             <a href="${playStore}" style="color: white;">Descargar para Android</a><br>
@@ -300,7 +286,6 @@
                 }
             }, 3000);
             
-            // Limpiar listeners después de 10 segundos
             setTimeout(() => {
                 document.removeEventListener('visibilitychange', handleVisibilityChange);
                 window.removeEventListener('blur', handleBlur);
@@ -308,19 +293,16 @@
             }, 10000);
         }
         
-        // Ejecutar cuando la página cargue
         window.addEventListener('load', () => {
             console.log('Página cargada');
             console.log('URL actual:', window.location.href);
             console.log('User Agent:', navigator.userAgent);
             
-            // Pequeña demora para mejor UX
             setTimeout(() => {
                 attemptAppOpen();
             }, 500);
         });
 
-        // También intentar si la página ya está cargada
         if (document.readyState === 'complete') {
             setTimeout(() => {
                 attemptAppOpen();
