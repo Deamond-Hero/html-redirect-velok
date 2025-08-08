@@ -80,6 +80,17 @@
             font-size: 0.8rem;
             text-align: left;
         }
+        
+        .store-links {
+            margin-top: 1rem;
+        }
+        
+        .store-links a {
+            color: white;
+            text-decoration: underline;
+            display: block;
+            margin: 0.5rem 0;
+        }
     </style>
 </head>
 <body>
@@ -90,6 +101,12 @@
         <p>Si no se abre automáticamente:</p>
         <button class="retry-btn" onclick="attemptAppOpen()">Reintentar</button>
         
+        <div class="store-links" id="store-links" style="display: none;">
+            <p>Descargar Velok:</p>
+            <a href="#" id="android-link" style="display: none;">📱 Descargar para Android</a>
+            <a href="#" id="ios-link" style="display: none;">🍎 Descargar para iOS</a>
+        </div>
+        
         <!-- Debug info -->
         <div class="debug" id="debug-info" style="display: none;">
             <p><strong>Debug Info:</strong></p>
@@ -97,6 +114,7 @@
             <p id="trip-info"></p>
             <p id="platform-info"></p>
             <p id="deeplink-info"></p>
+            <p id="store-urls-info"></p>
         </div>
         
         <button class="retry-btn" onclick="toggleDebug()" style="font-size: 0.7rem;">
@@ -106,6 +124,41 @@
 
     <script>
         let debugVisible = false;
+        let storeUrls = {
+            android: null,
+            ios: null
+        };
+
+        // Función para extraer las URLs de las tiendas desde los parámetros
+        function extractStoreUrls() {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            storeUrls.android = urlParams.get('androidUrl');
+            storeUrls.ios = urlParams.get('iosUrl');
+            
+            console.log('Store URLs extracted:', storeUrls);
+            
+            // Configurar los enlaces de las tiendas
+            if (storeUrls.android) {
+                const androidLink = document.getElementById('android-link');
+                androidLink.href = storeUrls.android;
+                androidLink.style.display = 'block';
+            }
+            
+            if (storeUrls.ios) {
+                const iosLink = document.getElementById('ios-link');
+                iosLink.href = storeUrls.ios;
+                iosLink.style.display = 'block';
+            }
+        }
+
+        // Función para obtener URLs de fallback (hardcodeadas)
+        function getFallbackUrls() {
+            return {
+                android: 'https://play.google.com/store/apps/details?id=com.velok.app',
+                ios: 'https://apps.apple.com/app/velok/id123456789'
+            };
+        }
 
         function toggleDebug() {
             const debugDiv = document.getElementById('debug-info');
@@ -125,6 +178,7 @@
             document.getElementById('trip-info').innerText = `Trip ID: ${tripId || 'N/A'} | Service ID: ${serviceId || 'N/A'}`;
             document.getElementById('platform-info').innerText = `Platform: ${getPlatform()}`;
             document.getElementById('deeplink-info').innerText = `Deep Link: ${generateDeepLink()}`;
+            document.getElementById('store-urls-info').innerText = `Store URLs - Android: ${storeUrls.android || 'fallback'} | iOS: ${storeUrls.ios || 'fallback'}`;
         }
 
         function getPlatform() {
@@ -187,7 +241,6 @@
             const tripId = extractTripId();
             const serviceId = extractServiceId();
             
-            // Nuevo formato: usar las rutas exactas de la app
             if (tripId) {
                 return `velok-app://(sharedTrips)/viewTrip?tripId=${tripId}`;
             }
@@ -217,8 +270,11 @@
             document.getElementById('status').innerText = 'Abriendo Velok...';
             
             const deepLink = generateDeepLink();
-            const playStore = 'https://play.google.com/store/apps/details?id=com.velok.app';
-            const appStore = 'https://apps.apple.com/app/velok/id123456789';
+            const fallbackUrls = getFallbackUrls();
+            
+            // URLs finales: usar dinámicas si están disponibles, sino fallback
+            const finalAndroidUrl = storeUrls.android || fallbackUrls.android;
+            const finalIosUrl = storeUrls.ios || fallbackUrls.ios;
             
             const platform = getPlatform();
             const isIOS = platform === 'iOS';
@@ -226,6 +282,7 @@
             
             console.log('Platform detected:', platform);
             console.log('Attempting to open deep link:', deepLink);
+            console.log('Using store URLs:', { android: finalAndroidUrl, ios: finalIosUrl });
             
             let appOpened = false;
             
@@ -269,20 +326,18 @@
             
             fallbackTimer = setTimeout(() => {
                 if (!appOpened) {
-                    console.log('App did not open, redirecting to store...');
-                    document.getElementById('status').innerText = 'Redirigiendo a la tienda...';
+                    console.log('App did not open, showing store options...');
+                    document.getElementById('status').innerText = 'La aplicación no se abrió automáticamente';
+                    document.getElementById('store-links').style.display = 'block';
                     
-                    if (isIOS) {
-                        window.location.href = appStore;
-                    } else if (isAndroid) {
-                        window.location.href = playStore;
-                    } else {
-                        document.getElementById('status').innerHTML = `
-                            App no disponible para esta plataforma.<br>
-                            <a href="${playStore}" style="color: white;">Descargar para Android</a><br>
-                            <a href="${appStore}" style="color: white;">Descargar para iOS</a>
-                        `;
-                    }
+                    // Auto-redirect basado en plataforma después de mostrar opciones
+                    setTimeout(() => {
+                        if (isIOS) {
+                            window.location.href = finalIosUrl;
+                        } else if (isAndroid) {
+                            window.location.href = finalAndroidUrl;
+                        }
+                    }, 2000);
                 }
             }, 3000);
             
@@ -298,12 +353,16 @@
             console.log('URL actual:', window.location.href);
             console.log('User Agent:', navigator.userAgent);
             
+            // Extraer URLs de las tiendas de los parámetros
+            extractStoreUrls();
+            
             setTimeout(() => {
                 attemptAppOpen();
             }, 500);
         });
 
         if (document.readyState === 'complete') {
+            extractStoreUrls();
             setTimeout(() => {
                 attemptAppOpen();
             }, 500);
